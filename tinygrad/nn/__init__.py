@@ -30,9 +30,11 @@ class BatchNorm2d:
         self.running_var.assign((1 - self.momentum) * self.running_var + self.momentum * prod(y.shape)/(prod(y.shape) - y.shape[1]) * batch_var.detach() )
         self.num_batches_tracked += 1
     else:
-      batch_mean = self.running_mean
-      # NOTE: this can be precomputed for static inference. we expand it here so it fuses
-      batch_invstd = self.running_var.reshape(1, -1, 1, 1).expand(x.shape).add(self.eps).rsqrt()
+        batch_mean, batch_var = self.running_mean, self.running_var
+        # Check if 'batch_invstd' attribute exists and is not None
+        if not hasattr(self, "batch_invstd") or self.batch_invstd is None:
+            self.batch_invstd = batch_var.add(self.eps)**-0.5
+        batch_invstd = self.batch_invstd
 
     return x.batchnorm(self.weight, self.bias, batch_mean, batch_invstd)
 
